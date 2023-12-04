@@ -1,0 +1,184 @@
+  version: '3.7'
+
+  services:
+  #--- Zookeper ---
+    zookeeper:
+      image: tap:kafka
+      container_name: kafkaZK
+      environment:
+        - KAFKA_ACTION=start-zk
+      networks: 
+        tap:
+          ipv4_address: 10.0.100.22
+
+  #--- Kafka ---
+    kafkaserver:
+      image: tap:kafka
+      container_name: kafkaServer
+      environment:
+        - KAFKA_ACTION=start-kafka
+        #- KAFKA_HEAP_OPTS=-Xmx256M
+      ports:
+        - 9092:9092
+      networks: 
+        tap:
+          ipv4_address: 10.0.100.23
+      depends_on:
+        - zookeeper
+    
+  
+  #--- Kafka Web UI ---
+    kafka-ui:
+      image: provectuslabs/kafka-ui:v0.7.0
+      container_name: kafkaWebUI
+      environment:
+        - KAFKA_CLUSTERS_0_NAME=local
+        - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafkaServer:9092
+      ports: 
+        - 8080:8080
+      networks: 
+        - tap
+      depends_on:
+        - kafkaserver
+
+    kafkaTopic1:
+      image: tap:kafka
+      container_name: kafkaTopicPrices
+      environment:
+        - KAFKA_ACTION=create-topic
+        - KAFKA_PARTITION=1
+        - KAFKA_TOPIC=apples
+      networks: 
+        - tap
+      depends_on:
+        - zookeeper
+        - kafkaserver
+
+
+    kafkaTopic2:
+      image: tap:kafka
+      container_name: kafkaTopicIndices
+      environment:
+        - KAFKA_ACTION=create-topic
+        - KAFKA_PARTITION=1
+        - KAFKA_TOPIC=indicators
+      networks: 
+        - tap
+      depends_on:
+        - zookeeper
+        - kafkaserver
+
+    logstash:
+      image: logstash:latest
+      networks:
+        - tap
+      volumes:
+        - ./App/pipelines.yml:/usr/share/logstash/config/pipelines.yml
+        - ./App/pipe1.conf:/usr/share/logstash/pipeline/pipe1.conf
+        - ./App/pipe2.conf:/usr/share/logstash/pipeline/pipe2.conf
+        - ./Data/dump1.json:/usr/share/dump1.json
+        - ./Data/dump2.json:/usr/share/dump2.json
+      depends_on:
+        - kafkaTopic1
+        - kafkaTopic2
+
+  #--- Spark ---
+    spark:
+      image: tap:spark
+      container_name: spark
+      environment:
+        - SPARK_ACTION=bash
+        - SPARK_MASTER_URL=spark://spark-master:7077
+        - SPARK_DEPLOY_MODE=client
+        - SPARK_APPLICATION_PYTHON_FILES=/opt/spark-app/regression.py
+      volumes:
+        - ./spark/code:/opt/spark-app
+      deploy:
+        resources:
+          limits:
+            cpus: '4.0'
+            memory: 4g
+      networks:
+        - tap
+      depends_on:
+        - elasticsearch
+      command: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0 --master local[*] /opt/spark-app/regression.py
+
+  #--- Spark ---
+    spark_data:
+      image: tap:spark
+      container_name: spark_data
+      environment:
+        - SPARK_ACTION=bash
+        - SPARK_MASTER_URL=spark://spark-master:7077
+        - SPARK_DEPLOY_MODE=client
+        - SPARK_APPLICATION_PYTHON_FILES=/opt/spark-app/indicators.py
+      volumes:
+        - ./spark/code:/opt/spark-app
+        - ./spark/jars:/opt/jars
+      deploy:
+        resources:
+          limits:
+            cpus: '2.0'
+            memory: 4g
+      networks:
+        - tap
+      depends_on:
+        - elasticsearch
+      command: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2,org.elasticsearch:elasticsearch-spark-30_2.12:8.2.0 --master local[*] /opt/spark-app/indicators.py
+
+
+    elasticsearch:
+      container_name: elasticsearch
+      hostname: elasticsearch
+      image: docker.elastic.co/elasticsearch/elasticsearch:8.2.0
+      ports:
+        - "9200:9200"
+        - "9300:9300"      
+      environment:
+        - node.name=elasticsearch
+        - xpack.security.enabled=false
+        - discovery.type=single-node
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        - cluster.routing.allocation.disk.threshold_enabled=false
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      networks: 
+        tap:
+          ipv4_address: 10.0.100.51
+      depends_on:
+        - logstash
+        - kafkaserver 
+
+    kibana:
+      container_name: kibana
+      image: docker.elastic.co/kibana/kibana:8.2.0
+      build: 
+        context: ./data_visualization/kibana
+        dockerfile: Dockerfile
+      hostname: kibana
+      volumes:
+        - ./data_visualization/kibana.yml:/usr/share/kibana/config/kibana.yml
+      depends_on:
+        - elasticsearch
+      ports:
+        - 5601:5601
+      environment:
+        - xpack.security.enabled=false
+        - KBN_PATH_CONF=/usr/share/kibana/config
+      networks:
+        tap:
+          ipv4_address: 10.0.100.52
+
+  networks:
+    tap:
+      name: tap
+      driver: bridge
+      ipam:
+        config:
+          - subnet: 10.0.100.0/24
+
+

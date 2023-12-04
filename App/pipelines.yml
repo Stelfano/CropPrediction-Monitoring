@@ -1,0 +1,7 @@
+- pipeline.id: prices-pipeline 
+  path.config: "/usr/share/logstash/pipeline/pipe1.conf"
+  queue.type: persisted
+
+- pipeline.id: indicators-pipeline
+  path.config: "/usr/share/logstash/pipeline/pipe2.conf"
+  queue.type: persisted
