@@ -19,11 +19,11 @@ Example of a kibana dash using this pipeline:
 
 ## Indicators dashboard:
 
-![](/home/stefano/Uni/TAP/Schermata del 2023-12-04 16-53-05.png)
+![Alt text](/home/stefano/Uni/TAP/Schermata del 2023-12-04 16-53-05.png)
 
 ## Prediction dashboard:
 
-![](/home/stefano/Uni/TAP/Schermata del 2023-12-04 16-52-45.png)
+![Alt text](/home/stefano/Uni/TAP/Schermata del 2023-12-04 16-52-45.png)
 
 ------
 
