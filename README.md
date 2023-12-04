@@ -1,3 +1,4 @@
+
 # CropPrediction-Monitoring
 
 This project aims at creating a pipeline for crop prediction an soil monitoring.
@@ -19,11 +20,11 @@ Example of a kibana dash using this pipeline:
 
 ## Indicators dashboard:
 
-![Alt text](/home/stefano/Uni/TAP/Schermata del 2023-12-04 16-53-05.png)
+![Schermata del 2023-12-04 16-53-05](https://github.com/Stelfano/CropPrediction-Monitoring/assets/59137246/ae426095-ce50-423c-b610-d89062b170a5)
 
 ## Prediction dashboard:
 
-![Alt text](/home/stefano/Uni/TAP/Schermata del 2023-12-04 16-52-45.png)
+![Schermata del 2023-12-04 16-52-45](https://github.com/Stelfano/CropPrediction-Monitoring/assets/59137246/5b186958-2f25-48a7-8984-d16bdd690b5b)
 
 ------
 
